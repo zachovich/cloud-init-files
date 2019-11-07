@@ -1,0 +1,31 @@
+# cloud-init-fix-iptables
+# ATTEMPT TO RESET IPTABLES, THIS SHOULD CLEAR THE WAY WHEN THE CUSTOMER MISTAKENLY BLOCK THE SYSTEM VIA IPTABLES, FIREWALLD, UFW OR SUSEFIREWALL2
+# Tested on:
+# 	- Amazon Linux 1 & 2
+#	- Red Hat 6 & 7
+#	- Ubuntu 14 & 16
+#	- SLES 12
+# Copy after this line >>>>>>>>
+
+Content-Type: multipart/mixed; boundary="//"
+MIME-Version: 1.0
+
+--//
+
+#cloud-config
+cloud_config_modules:
+  - [scripts-user, always]
+
+--//
+
+#! /bin/bash
+
+echo -en "IPTables RECOVERY [1] -> resetting IPTables\n"
+iptables --policy INPUT   ACCEPT;
+iptables --policy OUTPUT  ACCEPT;
+iptables --policy FORWARD ACCEPT;
+iptables -Z;
+iptables -F;
+iptables -X;
+
+--//

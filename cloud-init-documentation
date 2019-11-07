@@ -1,0 +1,106 @@
+Getting cloud-init modules executed during start-up:
+egrep '(Cloud-init v. 0.7.9 running|Running module)' /var/log/cloud-init.log
+
+
+Cloud-init is a python package and command line tools that initialize a Linux operating system instance in a cloud environment, the fact that the same image can instantiate unlimited number of instances makes cloud-init plays a crucial part of initializing Linux during its booting up process. Among many things cloud-init can do, it will for example inject a public ssh key into users authorized_keys file to allow ssh access to the new instance, generate ssh daemon private and public keys, create default and other users, run custom user scripts and make sure no MAC addresses for virtual network cards are hardcoded in network configuration files that might render the instance network-less. Cloud-init runs through 4 stages:
+
+[1] init-local [systemd job (pre-networking)] preparing the instance for networking, for example, remove hard coded MAC addresses from udev rules.
+[2] init [systemd job (metadata service crawler)] -> cloud_init_modules in cloud-config
+[3] modules:config [systemd job (metadata service crawler)] -> cloud_config_modules in cloud-config
+[4] modules:final [systemd job (metadata service crawler)] -> cloud_final_modules in cloud-config
+
+Cloud-init run modules in the last three stages and each moudle is configured for specific frequency, that is, how frequent a certain module should run, the following list dictates available options for frequency as well as it meaning:
+
+- once: run only once (do not re-run for new instance-id)
+- instance: run only the first boot for a given instance-id
+- always: run every boot
+
+Cloud init modules:
+
+===================
+= [1] cc_growpart =
+===================
+
+**Summary:** grow partitions
+
+Growpart resizes partitions to fill the available disk space.
+This is useful for cloud instances with a larger amount of disk space available
+than the pristine image uses, as it allows the instance to automatically make
+use of the extra space.
+
+The devices run growpart on are specified as a list under the ``devices`` key.
+Each entry in the devices list can be either the path to the device's
+mountpoint in the filesystem or a path to the block device in ``/dev``.
+
+The utility to use for resizing can be selected using the ``mode`` config key.
+If ``mode`` key is set to ``auto``, then any available utility (either
+``growpart`` or ``gpart``) will be used. If neither utility is available, no
+error will be raised. If ``mode`` is set to ``growpart``, then the ``growpart``
+utility will be used. If this utility is not available on the system, this will
+result in an error. If ``mode`` is set to ``off`` or ``false``, then
+``cc_growpart`` will take no action.
+
+There is some functionality overlap between this module and the ``growroot``
+functionality of ``cloud-initramfs-tools``. However, there are some situations
+where one tool is able to function and the other is not. The default
+configuration for both should work for most cloud instances. To explicitly
+prevent ``cloud-initramfs-tools`` from running ``growroot``, the file
+``/etc/growroot-disabled`` can be created. By default, both ``growroot`` and
+``cc_growpart`` will check for the existance of this file and will not run if
+it is present. However, this file can be ignored for ``cc_growpart`` by setting
+``ignore_growroot_disabled`` to ``true``. For more information on
+``cloud-initramfs-tools`` see: https://launchpad.net/cloud-initramfs-tools
+
+Growpart is enabled by default on the root partition. The default config for
+growpart is:
+
+    growpart:
+        mode: auto
+        devices: ["/"]
+        ignore_growroot_disabled: false
+
+**Internal name:** ``cc_growpart``
+
+**Module frequency:** per always
+
+**Supported distros:** all
+
+**Config keys**::
+
+    growpart:
+        mode: <auto/growpart/off/false>
+        devices:
+            - "/"
+            - "/dev/vdb1"
+        ignore_growroot_disabled: <true/false>
+
+
+
+===================
+= [2] cc_resizefs =
+===================
+
+**Summary:** resize filesystem
+
+Resize a filesystem to use all avaliable space on partition. This module is
+useful along with ``cc_growpart`` and will ensure that if the root partition
+has been resized the root filesystem will be resized along with it. By default,
+``cc_resizefs`` will resize the root partition and will block the boot process
+while the resize command is running. Optionally, the resize operation can be
+performed in the background while cloud-init continues running modules. This
+can be enabled by setting ``resize_rootfs`` to ``true``. This module can be
+disabled altogether by setting ``resize_rootfs`` to ``false``.
+
+**Internal name:** ``cc_resizefs``
+
+**Module frequency:** per always
+
+**Supported distros:** all
+
+**Config keys**::
+
+    resize_rootfs: <true/false/"noblock">
+    resize_rootfs_tmp: <directory>
+"""
+
+NOTE: resizefs module DOES NOT support non-root partitions, but it is in cloud-init roadmap.

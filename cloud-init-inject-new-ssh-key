@@ -1,0 +1,22 @@
+# cloud-init-inject-new-ssh-key
+# INJECT A PUBLIC SSH KEY TO THE DEFAULT USER OR THE FIRST USER DEFINED IN ''USERS''
+# Tested on:
+# 	- Amazon Linux 1 & 2
+#	- Red Hat 6 & 7
+#	- Ubuntu 14 & 16
+#	- SLES 12
+# Copy after this line >>>>>>>>
+
+Content-Type: multipart/mixed; boundary="//"
+MIME-Version: 1.0
+
+--//
+
+#cloud-config
+cloud_init_modules:
+  - [ssh, always]
+
+ssh_authorized_keys:
+  - ssh-rsa <COPY AND PASTE THE CONTENT OF THE PUBLIC SSH KEY HERE>
+
+--//

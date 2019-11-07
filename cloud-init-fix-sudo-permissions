@@ -1,0 +1,75 @@
+# cloud-init-fix-sshd
+# ATTEMPT TO FIX PREMISSIONS ON ''ONLY NECESSARY'' FILES AND DIRECTORIES FOR SUDO PACKAGE TO WORK
+# Tested on:
+# 	- Amazon Linux 1 & 2
+#	- Red Hat 6 & 7
+#	- Ubuntu 14 & 16
+#	- SLES 12
+# Copy after this line >>>>>>>>
+
+Content-Type: multipart/mixed; boundary="//"
+MIME-Version: 1.0
+
+--//
+
+#cloud-config
+cloud_config_modules:
+  - [scripts-user, always]
+
+--//
+
+#! /bin/bash
+grep -q '14.04' /etc/os-release && apt-get install -y acl
+
+for file in $(find /etc/sudoers.d -type f -print); do
+ <<EOF cat | setfacl --restore -
+# file: $file
+# owner: root
+# group: root
+user::r--
+group::r--
+other::---
+EOF
+done
+
+SUDO_LIB=$(find /usr -type f -name 'sudoers.so')
+<<EOF cat | setfacl --restore -
+# file: /usr/bin/sudo
+# owner: root
+# group: root
+# flags: s--
+user::--x
+group::--x
+other::--x
+
+# file: $SUDO_LIB
+# owner: root
+# group: root
+user::rwx
+group::r-x
+other::r-x
+
+# file: /etc/sudoers
+# owner: root
+# group: root
+user::r--
+group::r--
+other::---
+
+# file: /etc/sudoers.d
+# owner: root
+# group: root
+user::rwx
+group::r-x
+other::---
+
+# file: /etc/sudo.conf
+# owner: root
+# group: root
+user::rw-
+group::r--
+other::---
+
+EOF
+
+--//

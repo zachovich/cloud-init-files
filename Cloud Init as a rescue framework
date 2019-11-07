@@ -1,0 +1,47 @@
+Cloud Init as a rescue framework
+--------------------------------
+
+[1] SSH recovery [DONE] https://s3-eu-west-1.amazonaws.com/cloud-init-nuggets/ssh/cloud-init-fix-sshd-permissions
+[2] Enabled Ubuntu ufw firewall and IPTables [DONE] https://s3-eu-west-1.amazonaws.com/cloud-init-nuggets/connectivity/cloud-init-reset-iptables
+[3] Inject new ssh user public key [DONE] https://s3-eu-west-1.amazonaws.com/cloud-init-nuggets/ssh/cloud-init-inject-new-ssh-key
+[4] Recover original public key <-- XX
+[5] Automatically resize parition size 
+[6] Automatically resize parition filesystem
+[7] Fix sudoer permissions [DONE] https://s3-eu-west-1.amazonaws.com/cloud-init-nuggets/generic/cloud-init-fix-sudo-permissions
+[8] Fix /etc/fstab
+
+>>>>>>>
+
+A Kumo to recovery from missing / permissions: getfact and setfacl
+
+>>>>>>>>
+
+Using cloud-init framework I have created a number of modules (if this is a valid naming) to do short tasks on an instance in easy and efficient way without having to detach the root filesystem and attach it to a recovery instance. The step should be as easy as:
+
+[1] stop the instance
+[2] create a snapshot of the root volume if not there already.
+[3] copy/paste cloud-init module in the instance user data
+[4] start the instance and test if the issue is resolved
+[5] stop the instance and remove the user data from step [3]
+
+Here are the available modules now:
+(a) SSH recovery (location: https://s3-eu-west-1.amazonaws.com/cloud-init-nuggets/ssh/cloud-init-fix-sshd-permissions)
+This is very useful when a customer accidentally change part or all of the root filesystem permission that includes ssh service files. This module will reset ssh related files and directories permissions.
+
+(b) sudoer recovery (location: https://s3-eu-west-1.amazonaws.com/cloud-init-nuggets/generic/cloud-init-fix-sudo-permissions)
+Used in same situations as mentioned in module (a: SSH recovery) but this module will reset sudoer related files and directories permissions. If you are sure the cx has changed the entire filesystem permission you might need to merge the two modules into one, this way, you will regain ssh as well as sudo capability in the troubled instance.
+
+(c) IPTables reset (location: https://s3-eu-west-1.amazonaws.com/cloud-init-nuggets/connectivity/cloud-init-reset-iptables)
+In a situation when a customer accidently activates a firewall or block ssh access to an instance, this module reset IPTables and allow all access to the instance. This should work with native IPTables, Ubuntu UFW, Red Hat and Centos Firewalld and SLES SuSEFirewall2.
+
+(d) Inject ssh key (location: https://s3-eu-west-1.amazonaws.com/cloud-init-nuggets/ssh/cloud-init-inject-new-ssh-key)
+In cases where the customer loses the private key and loses access to the instance, this module will inject the public key that you feed to it to the default cloud-init or the first user defined in 'users' key.
+
+All the modules are tested against:
+  - Amazon Linux 1
+  - Amazon Linux 2
+  - Red Hat Enterprise Linux 6
+  - Red Hat Enterprise Linux 7
+  - Ubuntu 14
+  - Ubuntu 16
+  - SuSE Linux Enterprise Server 12

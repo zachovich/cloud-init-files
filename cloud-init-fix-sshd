@@ -1,0 +1,44 @@
+# cloud-init-fix-sshd-permissions
+# ATTEMPT TO FIX PREMISSIONS ON ''ONLY NECESSARY'' FILES AND DIRECTORIES FOR SSH DAEMON TO RUN
+# Tested on:
+# 	- Amazon Linux 1 & 2
+#	- Red Hat 6 & 7
+#	- Ubuntu 14 & 16
+#	- SLES 12
+# Copy after this line >>>>>>>>
+
+Content-Type: multipart/mixed; boundary="//"
+MIME-Version: 1.0
+
+--//
+Content-Type: text/cloud-config; charset="us-ascii"
+MIME-Version: 1.0
+Content-Transfer-Encoding: 7bit
+Content-Disposition: attachment; filename="cloud-config.txt"
+
+#cloud-config
+cloud_config_modules:
+  - [scripts-user, always]
+
+--//
+#! /bin/bash
+
+echo -en "SSH RECOVERY [BEGIN] -> setting permissions\n"
+
+2>/dev/null chown -R root.root /var/{empty,run}/sshd/ /var/lib/empty/ /etc/ssh/
+2>/dev/null chmod 0755 /var/{empty,run}/sshd/ /var/lib/empty/ /etc/ssh/
+
+find /etc/ssh/ -type f -path "*ssh*key" -exec chmod 0600 {} \;
+
+for user in $(find /home -maxdepth 1 -mindepth 1 -type d -exec basename {} \;)
+do
+  2>/dev/null chown $user.$user /home/$user/{,.ssh}
+  2>/dev/null chmod 0700 /home/$user/{,.ssh}
+  2>/dev/null chown $user.$user /home/$user/.ssh/authorized_keys
+  2>/dev/null chmod 0600 /home/$user/.ssh/authorized_keys
+done
+
+echo -en "SSH RECOVERY [FINAL] -> restarting ssh daemon\n"
+[[ -x $(2>/dev/null which systemctl) ]] && systemctl restart sshd.service || service sshd restart
+
+--//
